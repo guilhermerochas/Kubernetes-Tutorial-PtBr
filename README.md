@@ -276,3 +276,205 @@ if __name__ == '__main__':
 Img. 6. Arquitetura completa de Microserviços
 
 Na proxima sessão, iremos examinar como iniciar os serviços em Containers Docker, já que é um pré-requisito para ser capaz de rodá-los em um Cluster Kubernetes.
+
+## 2. Construindo imagens de containeres para cada serviço
+
+Kubernetes é um orquestrador de containers. Entendido isso nós precisamos de containers para poder orquestra-los. Mas o que são containers? A melhor resposta está na documentação do docker.
+
+> Uma imagem de container é um pacote de um pedaço de software leve, único e executavel que inclui tudo necessario para rodalo: código, tempo de execução, ferramentas de sistema, bibliotecas de sistema, configurações. Disponivel para aplicações baseadas em Linux e Windows, software containerizado vai sempre rodar o mesmo, não importando o ambiente.
+
+Isso significa que containers rodam em qualquer computador -- mesmo em servidores de produção -- **sem nenhuma diferença**
+
+### Servindo arquivos estáticos em React de uma VM
+
+Os contras de usar uma Maquina Virtual:
+
+1. Ineficiente em recursos, cada VM é sobrecarregada de um SO inteiro.
+2. É dependente de plataforma. O que funcionou no seu computador pode não funcionar num servidor de produção
+3. Pesada e lerda na escalabilidade comparada com Containeres.
+
+![Servidor Web Nginx com arquivos estáticos em uma VM](https://cdn-media-1.freecodecamp.org/images/vP3JZyOygXDzTh7I650wZHtHWkv56ioduUJS)
+
+Img. 7.Servidor Web Nginx com arquivos estáticos em uma VM
+
+### Servindo arquivos estáticos em React de um Container
+
+Os pros de usar um Container:
+
+1. Eficiente em recursos, usa o SO Host com a ajuda do Docker.
+2. Independente de plataforma. O container que você rodou no seu computador irá rodar em qualquer lugar.
+3. Leve usando camada de imagens
+
+![Servidor Web Nginx com arquivos estáticos em um Container](https://cdn-media-1.freecodecamp.org/images/6I9ZEnnQNMqeTCK8kRWoOjDucfLCJqjAUGWd)
+
+Img 8.Servidor Web Nginx com arquivos estáticos em um Container
+
+### Criando uma imagem de um container para o App React (Introdução ao Docker)
+
+O fundamento basico para um container Docker é a .dockerfile. A **Dockerfile** começa com um container de base e continua com uma sequencia de instruções de como criar uma nova imagem de container que satisfaz as necessidades de sua aplicação.
+
+Antes de começar definindo a Dockerfile, vamos lembrar que os passos que tomamos para servir os arquivos estáticos usando nginx:
+
+1. Tranformar em arquivos estáticos (npm run build)
+2. Iniciar o servidor nginx
+3. copiar o conteudo para a pasta **build** do seu projeto sa-frontend para nginx/html.
+
+Na proxima sessão, você ira notar paralelos em como criar Containers é similar no que fizemos em nossa configuração React local.
+
+### Definindo a Dockerfile para SA-Frontend
+
+A instrução no Dockerfile para o SA-Frontend é apenas uma tarefa de dois passos. Isso é por que o Time da Nginx nos disponibilizou [uma imagem de base](https://hub.docker.com/_/nginx/) para Nginx, a qual nós usamos para trabalhar encima dela. Os dois passos são:
+
+1. Inicie da **Imagem de base Nginx**
+2. Copiar o diretório **sa-frontend/build** para o diretório nginx/html do container.
+
+A maneira que parece convertida em uma Dockerfile:
+```dockerfile
+FROM nginx
+COPY build /usr/share/nginx/html
+```
+
+Isso não é incrivel? é até humanamente legivel, vamos recapitular:
+
+Inicie de uma imagem nginx. (Qualquer coisa que tenham feito aqui). Copiar o diretorio **build** para o diretório **nginx/html** na imagem. É isso!
+
+Você talvez esteja se perguntando, como que eu sabia para onde copiar os arquivos da build? ex. `/usr/share/nginx/html`. Muito simples: estava documentada na [imagem](https://hub.docker.com/_/nginx/) nginx no Docker Hub.
+
+### Criando e Fazendo *Push* de containers
+
+Antes de nos podemos realizar *push* de nossas imagens, precisamos realizar um Container Registry (Registro de Container) para realizar o host de nossas imagens. Docker Hub é um serviço livre de containers na nuvem que nós podemos usar de demonstração. Você precisa realizar essas três tarefas antes de continuar:
+
+1. [Instalar Docker CE](https://www.docker.com/products/container-runtime)
+2. Registrar-se no Docker Hub.
+3. Logar ao executar o comando abaixo:
+
+```bash
+docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+```
+Depois de completar as tarefas acima navegue para o diretorio **sa-frontend**. Então execute o comando abaixo (substituindo $DOCKER_USERNAME com seu nome de usuario do docker hub. Por exemplo rinormaloku/sentiment-analysis-frontend)
+
+```bash
+docker build -f Dockerfile -t $DOCKER_USER_ID/sentiment-analysis-frontend .
+```
+
+Podemos remover `-f Dockefile` por que nós já estamos no diretório contendo o Dockerfile.
+
+Para fazer o *push* de imagens, use o comando docker push:
+
+```bash
+docker push $DOCKER_USER_ID/sentiment-analysis-frontend
+```
+
+Verifique no seu repositório do docker hub que sua imagem teve um *push* realizado com sucesso.
+
+### Rodando o container
+
+Agora a imagem em `$DOCKER_USER_ID/sentiment-analysis-frontend` pode ser baixada por qualquer um:
+
+```bash
+docker pull $DOCKER_USER_ID/sentiment-analysis-frontend
+docker run -d -p 80:80 $DOCKER_USER_ID/sentiment-analysis-frontend
+```
+
+Nosso container Docker está rodando!
+
+Antes de continuarmos vamos elaborar o 80:80 que eu acho confuso:
+- O primeiro 80 é a porta do host (ex. meu computador)
+- o segundo 80 é a porta do container nas quais as chamadas devem ser encaminhadas.
+
+![Mapeamneto de porta do Host para o Container](https://cdn-media-1.freecodecamp.org/images/uUv5pZc6QErqJVcacC0vU-QEvjDjVF1VlQ9l)
+
+Img. 9. Mapeamneto de porta do Host para o Container
+
+Ele mapeia da <PortaUsuario> para a <PortaContainer>. Significa que chamadas da porta 80 do host devem ser mapedas para a porta 80 do container, como mostrado na figura 9.
+  
+Por conta que a porta foi rodada no host (seu computador) ela deve ser acessivel em localhost:80. Se voce não tiver suporte do docker nativo, voce pode abrir em <ip da docker-machine>:80. Para descobrir o ip da sua docker-machine execute `docker machine ip`.
+
+De uma tentativa! Voce deve ser capaz de acessar a aplicação react no endpoint.
+
+### O Dockerignore
+
+Nós vimos antes que construir imagens para SA-Frontend foi devagar, perdoe, **Muito devagar**. Isso foi por que o **build context** que foi mandado para o Docker Deamon. Em mais detalhes, o diretório **build context** é definido pelo ultimo argumento no comando de build (O seguinte ponto), no qual especifica o contexto de construção. E no nosso caso, ele inclui as seguintes pastas:
+
+```bash
+  sa-frontend:
+  |   .dockerignore
+  |   Dockerfile
+  |   package.json
+  |   README.md
+  +---build
+  +---node_modules
+  +---public
+  \---src
+```
+Mas os unicos dados que precisamos é a pasta **build**. Enviar qualquer outra coisa é perda de tempo. Nós podemos melhorar nosso tempo de build nos desfazendo dos outros diretórios. Ai que entra o `.dockerignore`. Para voce que já esta familiarizado com `.gitignore`, ex. adicione todos os diretórios que quer ignorar no arquivo `.dockerignore`, como é mostrado abaixo:
+
+```bash
+  node_modules
+  src
+  public
+```
+
+O arquivo `.dockerignore` deve estar na mesma pasta que o Dockerfile. Agora construir as imagens irá demorar apenas segundos.
+
+Vamos continuar com a Aplicação Java
+
+### Construindo a imagem do container para a Aplicação Java
+
+Adivinha! Você aprendeu quase tudo sobre criar imagens de containers! esse é o motivo de por que essa parte é estremamente curta.
+
+Abra a Dockerfile em **sa-webapp**, e você irá encontrar duas novas palavras chaves:
+
+```dockerfile
+ENV SA_LOGIC_API_URL http://localhost:5000
+…
+EXPOSE 8080
+```
+
+A palavra chave **ENV** declara uma Variavel de Ambiente dentro do container docker. Isso vai nos habilitar à prover uma URL para a API de Analise Sentimental quando começar o Container.
+
+Adicionalmente, a palavra chave **EXPOSE** expõe a porta que nós queremos acessar depois. **Mas olha!!!** Nós não fizemos isso na Dockerfile do SA-Frontend, belo ponto! Isso é apenas para fins de documentação, em outras palavras isso server de informação para a pessoa que está lendo a DockerFile.
+
+Você deve estar familiarizado com a construção e o *push* de imagens de container. Se tiver quaisquer dificuldade leia o arquivo README.md no diretório **sa-webapp**.
+
+### Construindo a imagem do container para a Aplicação Python
+
+No Dockerfile em **sa-logic** não tem nenhuma palavra chave nova. Agora você pode se chamar um Mestre Docker?
+
+Para a construção e o *push* de imagens de container leia o README.md no diretório **sa-logic**
+
+### Testando a Aplicação Containerizada
+
+Voce confia em algo que nem testou? Nem eu. Vamos dar uma testada nos containers.
+
+1. Rode o container **sa-logic** e o configure para escutar na porta 5050:
+
+```bash
+  docker run -d -p 5050:5000 $DOCKER_USER_ID/sentiment-analysis-logic
+```
+2. rode o container **sa-webapp** e o configure para escutar na porta 8080, adicionamente nos precisamos mudar a porta na qual a nossa aplicação ira escutar por sobreescrever nssa variabel de ambiente SA_LOGIC_API_URL.
+
+```bash
+   $ docker run -d -p 8080:8080 -e SA_LOGIC_API_URL='http://<id_do_container ou ip da docker-machine>:5000' $DOCKER_USER_ID/sentiment-analysis-web-app
+```
+
+De uma olhadada no [README](https://github.com/rinormaloku/k8s-mastery/blob/master/sa-webapp/README.md) em como conseguir o ip do contaner ou da docker-machine.
+
+3. Rode o container **sa-frontend**:
+
+```bash
+  docker run -d -p 80:80 $DOCKER_USER_ID/sentiment-analysis-frontend
+```
+Estamos prontos. Abra o navegador em **localhost:80.**
+
+**Atenção:** Se você mudar a porta para a sa-webapp, ou se estuver usando o ip da docker-machine, você vai precisar atualizar o App.js no **sa-frontend** no método analyzeSentence para buscar os dados em uma nova Porta ou IP. Depois voce precisa dar um *build*, e usar a imagem atualizada.
+
+![Microserviços rodando em Containers](https://cdn-media-1.freecodecamp.org/images/gdDm95hkRv-AnNmuHUFDIONucxEWcvXN1p34)
+
+Img. 10.Microserviços rodando em Containers
+
+### Teaser Cerebral -- Por que Kubernetes?
+
+Nessa sessão, nós aprendemos sobre as Dockerfiles, como usalas para construir imagens, e os comando para fazer *push* para a Docker Registry. Adicionalmente, investigamos como reduzir o numero de arquivos mandados para um *build context* ao ignorar arquivos inuteis. E no final, nos tivemos nossa aplicação rodando em containers. Então por que Kubernetes? Vamos investigar mais a fundo no proximo arquivo, mas eu quero deixar um teaser cerebral para você.
+
+- Nossa aplicação web de Analise Sentimental se torna um hit de sucesso no mundo e temos milhoes de requisições diarias por minuto para analizar e temos uma enorme carga em **sa-webapp** e **sa-logic**. Como podemos escalar os containers?
