@@ -141,7 +141,7 @@ const polarityComponent = this.state.polarity !== undefined ?
 ```
 Tudo parece correto. Mas o que estamos esquecendo? se voce disse que não configuramos nada para escutar na localhost:8080, você está certo! Nós devemos iniciar nossa Aplicação Spring Web para escutar nessa porta!
 
-![Microserviço da Aplicação Web Spring que estamos esquecendo]()https://cdn-media-1.freecodecamp.org/images/KNFf142A66wPteChS7IQmcZA8ohQTZRA8U7E
+![Microserviço da Aplicação Web Spring que estamos esquecendo](https://cdn-media-1.freecodecamp.org/images/KNFf142A66wPteChS7IQmcZA8ohQTZRA8U7E)
 
 Img. 4.Microserviço da Aplicação Web Spring que estamos esquecendo
 
