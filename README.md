@@ -478,3 +478,200 @@ Img. 10.Microserviços rodando em Containers
 Nessa sessão, nós aprendemos sobre as Dockerfiles, como usalas para construir imagens, e os comando para fazer *push* para a Docker Registry. Adicionalmente, investigamos como reduzir o numero de arquivos mandados para um *build context* ao ignorar arquivos inuteis. E no final, nos tivemos nossa aplicação rodando em containers. Então por que Kubernetes? Vamos investigar mais a fundo no proximo arquivo, mas eu quero deixar um teaser cerebral para você.
 
 - Nossa aplicação web de Analise Sentimental se torna um hit de sucesso no mundo e temos milhoes de requisições diarias por minuto para analizar e temos uma enorme carga em **sa-webapp** e **sa-logic**. Como podemos escalar os containers?
+
+### Introdução ao Kubernetes
+
+Eu te prometo e não estou exagerando que ao final desse artigo você estará se pergundando "Por que não chamamos isso de Supernetes?".
+
+![Supernetes](https://cdn-media-1.freecodecamp.org/images/6z5-sOpVzRF1YeB2kQzrXakp2kBiGDBlMx4t)
+
+Img. 11.Supernetes
+
+Se você seguiu esse artigo desde o começo nós cobrimos muita consistencia e muito conhecimento. Você deve estar preocupado que essa vai ser a parte mais dificil, mas, essa é a mais simples. O motivo por que aprender Kubernetes é assustador é por conta de "todo o resto" que nós cobrimos tambem.
+
+### O qué é Kubernetes
+
+Depois de que começamos nossos microserviços de containers nós tivemos uma pergunta, vamos elaborar melhor em um formato de Perguntas e Respostas:  
+P: Como escalamos containers?  
+R: Nós subimos mais um.  
+P: Como balanceamos carga entre eles? E se o servidor já estiver usando o maximo e nós precisemos de outro servidor para nosso container? como calculamos a melhor utilização de hardware?  
+R: Éééé... hmmmm... (xô ve na internet).  
+P: Fazer atualizações sem quebrar nada? e se quebrar, como podemos voltar pra versão que está funcionando.
+
+Kubernetes soluciona todas essas perguntas (e mais!). Minha tentativa de reduzir Kubernetes em apenas umas frase seria: "Kubernetes é uma Orquestração de Containers, que abstrai toda a infraestrutura interna. (Onde os containers rodam)".
+
+Temos uma ideia vaga sobre Orquestra de Containers. Nós vamos ver em pratica na continuação desse artigo, mas essa é a primeira vez que estamos lendo sobre "abstrai a infraestrutura interna". vamos dar uma olhada nisso.
+
+### Abstraindo a infraestrutura interna.
+
+Kubernetes abstrai a infraestrutura interna provendo uma API simples na qual podemos mandar requisições. Essas requisições avisam o Kubernetes para os encontrar nas melhores das capacidades. Por exemplo, É tão simples quanto pedir "Kubernetes suba 4 containers da imagem x". Então Kubernets vai achar os nós pouco utilizados nos quais ele irá rodar os novos containers (veja Img. 12.).
+
+![Requisição para o Servidor da API](https://cdn-media-1.freecodecamp.org/images/oRhjNBu9XyT74V6dxJVs1YJhgoC2eMU8TsCX)
+
+Img. 12.Requisição para o Servidor da API
+
+O que isso significa para o desenvolvedor? que ele não tem que se importar para o numero de nós, onde eles começam e como eles se comunicam. Ele não tem que se preocupar com a otimização de hardware ou se preocupar com nós caindo (E pela *Lei de Murphy* eles vão cair), por que novos nós podem ser adicionados para o Cluster de Kubernetes. Nesse periodo de tempo Kubernetes vai rodar os containers nos outros nós que ainda estão rodando. Fazendo uma das melhores capacidades possivel.
+
+Na figura 12 nos podemos ver algumas coisas novas:
+
+- **API Server (Servidor da API)**: Nossa unica maneira de interagir com o Cluster. Seja iniciar ou parar outro container (ééé pods\*)
+- **Kubelet**: monitora os containers (ééé pods\*) dentro do nó e comunica com o nó *master*.
+- **Pods\***: Inicialmente só pense que pods são containers.
+
+E vamos parar por aqui, por que se aprofundar vai fazer com que perdamos nosso focuo e podemos fazer isso depois, existe varios recursos onde você pode aprender, como a documentação oficial (a maneira dificil) ou lendo o livro incrivel [Kubernetes in Action](https://www.amazon.com/Kubernetes-Action-Marko-Luksa/dp/1617293725), por [Marko Lukša](https://twitter.com/markoluksa).
+
+### Padronizando os Provedores de Serviços de Nuvem
+
+Outro forte ponto que Kubernetes leva consigo, é que ele padroniza os Provedores de Serviços de Nuvem (PSNs). Essa é uma frase forte, mas vamos elaborar com um exemplo:
+
+&mdash; Um especialista em Azure, Google Cloud Platform ou outro PSN acaba trabalhando em um projeto em uma nova PSN, na qual ele não tem nenhuma experiencia com ela. Pode haver varias consequencias, vou falar algumas: Ele pode perder o prazo; A empresa pode querer contratar mais recursos, e muito mais.
+
+Em contraste, com Kubernetes nem temos esse problema. Por que você seria capaz de executar os mesmos comandos para a API Server não importando o PSN. Você em uma maneira de requisitar declarativamente da API Server **o que quiser**. Kubernetes abstrai e implementa o **como** para a PSN em questão.
+
+Dareium segundo para entender -- Essa é um aspecto extremamente poderoso. Para empresas isso significa que elas não estão presas ao PSN, e elas podem continuar. Eles ainda vão ter a esperteza, ainda vão ter os recursos, e podem fazer isso *mais barato*!
+
+Tudo dito, vamos na proxima sessão botar Kubernetes na Pratica.
+
+### Kubernetes na Pratica -- Pods
+
+Nos configuramos os microserviços para rodar em containers e foi um processo pesado, mas funcionou. Tambem mencionamos que essa não era uma solução escalavel e resiliente e que Kubernetes resolve esses problemas. Na continuação desse artigo, nos vamos migrar nossos serviços para um resultado final mostrado na imagem 13, onde os Containers estão orquestrados pelo Kubernetes.
+
+![Microserviços rodando em um Cluster Gerido por Kubernetes](https://cdn-media-1.freecodecamp.org/images/mrA3VBYh2pbG7qH9wnsMj-QxRxZ2MAqA5oTt)
+
+Img. 13.Microserviços rodando em um Cluster Gerido por Kubernetes
+
+Nesse artigo iremos usar Minikube para debugar localmente, mesmo que tudo o que será apresentado funciona tambem no Azure e no Google Cloud Platform.
+
+### Instalando e Iniciando Minikube
+
+Siga a documentação oficial para a instalação do [Minikube](https://minikube.sigs.k8s.io/docs/start/). Durante a instalação do Minikube, você tambem ira instalar **Kubectl**. Esse é o cliente que faz requisições ao Kubernetes API Server.
+
+Para iniciar o Minikube execute o comando `minikube start` e depois de completo execute `kubectl get nodes` que você receberá a seguinte output
+
+```bash
+kubectl get nodes
+NAME       STATUS    ROLES     AGE       VERSION
+minikube   Ready     <none>    11m       v1.9.0
+```
+
+Minikube prove para nos com um Cluster Kubernetes com um nó, mas lembre-se nos não nos importamos quantos nós existem, Kubernetes abstrai todos eles, e para nós aprendermos Kubernetes isso não tem importancia. Na proxima sessão, nos iremos começãr com nosso primeiro recurso de Kubernetes \[RUFEM OS TAMBORES\] **O Pod**.
+
+### Pods
+
+Eu amo containers, e até o momento você ama tambem. Então por que Kubernetes resolveu nos dar Pods como a menor unidade computacional implementavel? o que um pod faz? pods podem ser compostos de um ou um grupo de containers que dividem o mesmo ambiente de execução.
+
+Mas nos realmente precisamos rodar dois containers em um pod? Ééé... Geralmente, você rodaria apenas um container mas é isso que vamos fazer nos nossos exemplos. Mas para casos onde por ex. dois containers precissem dividir volumes, ou precisem comunicar-se atravez de um processo interno ou caso contrario eles são extremamente acoplados, isso é feito possivel usando **Pods**, outra usabilidade que Pods nos permitem fazer é que eles não estão presos aos containers do Docker, se você quiser podemos usar outras tecnologias por ex. [Rtk](https://coreos.com/rkt/).
+
+![Propriedades de Pods](https://cdn-media-1.freecodecamp.org/images/DiiFgshSEsYe9Rj2AHAUtJUI90CVH53VdioW)
+
+Img. 14.Propriedades de Pods
+
+Para resumir, as principais propriedades de Pods são (tambem mostrado na imagem 14):
+1. Cada pod tem seu endereço de Ip unico no Cluster de Kubernetes.
+2. Pods podem ter multiplos containers dividindo a mesma porta, assim como comunicação através do localhost (entendivelmente eles não podem se comunicar pela mesma porta), e comunicação com outros containers de outros pods deve ser feita na conjunção do ip do pod.
+3. Containers num pod podem dividir o mesmo volume\*, mesmo ip, porta, namespace IPC
+
+\*Containers tem seus sistemas de arquivos isolados, mesmo que eles sejam capazes de compartilhar dados usando o recurso Kubernetes de **Volumes**.
+
+Isso é mais do que informação suficiente para nos continuarmos, mas para satisfazer sua curiosidade cheque a [documentação oficial](https://kubernetes.io/docs/concepts/workloads/pods/).
+
+### Definição de Pod
+
+Abaixo temos um arquivo de manifesto para nosso primeiro pod **sa-frontend**, e então temos abaixo uma explicação de todos os pontos.
+
+```yaml
+apiVersion: v1
+kind: Pod                                            # 1
+metadata:
+  name: sa-frontend                                  # 2
+spec:                                                # 3
+  containers:
+    - image: rinormaloku/sentiment-analysis-frontend # 4
+      name: sa-frontend                              # 5
+      ports:
+        - containerPort: 80 
+```
+
+1. **Kind**: especifica o tipo do recurso de Kubernet que queremos criar. Nesse caso, um **Pod**.
+2. **Name**: define o nome do nosso recurso. Nos nomeamos de **sa-frontend**.
+3. **Spec** no objeto ele define o estado que desejamos para o recurso. O mais importante é a propriedade que todas as Spec dos Pods são Arrays de containers.
+4. **Image** é a a imagem do container que queremos para inicializar esse pod.
+5. **Name** é o nome unico para o container no pod
+6. **Container Port**: a porta na qual o container vai escutar. isso é apenas uma indicação ao leitor (remover a porta não vai restringir o acesso).
+
+### Criando o pod para SA Frontend
+
+Você pode achar o arquivo da definição do pod acima em `resource-manifests/sa-frontend-pod.yaml.` Você pode tanto navegar pelo terminal para a pasta ou prover a localização completa na linha de comando. Então execute o comando:
+
+```bash
+kubectl create -f sa-frontend-pod.yaml
+pod "sa-frontend" created
+```
+
+Para checar se o Pod está ropdando execute o comando seguinte:
+```bash
+kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+sa-frontend                   1/1       Running   0          7s
+```
+Se ele ainda estiver em **ContainerCreating** você pode executar o comando acima com o argumento `--watch` para atualizar a informação quando o pod estiver em um Running State.
+
+### Acessando a aplicação externamente
+
+Para acessar a aplicação externamente nos criamos um recueso em Kubernetes do tipo **Service**, que veremos no proximo artigo, o qual é a maneira genuina de implementação, mas para uma breve debugada nos temos uma outra opção, e ela é a port-forwarding:
+
+```bash
+kubectl port-forward sa-frontend 88:80
+Forwarding from 127.0.0.1:88 -> 80
+```
+
+Abra seu navegador em **127.0.0.1:88** e você vai obter a aplicação react.
+
+### A maneira errada de escalar
+
+Nos dissemos que uma das principais caracteristicas de Kubernetes é a escalabilidade, para provar vamos rodar outro pod. Para faer isso vamos criar outro recurso de pod, com a seguinte definição
+
+```yaml
+apiVersion: v1
+kind: Pod                                            
+metadata:
+  name: sa-frontend2      # A unica mudança
+spec:                                                
+  containers:
+    - image: rinormaloku/sentiment-analysis-frontend 
+      name: sa-frontend                              
+      ports:
+        - containerPort: 80
+```
+
+Crie um novo pod executando o seguinte comando:
+
+```bash
+kubectl create -f sa-frontend-pod2.yaml
+pod "sa-frontend2" created
+```
+Verifique que o seguindo pod esta rodando executando:
+
+```bash
+kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+sa-frontend                   1/1       Running   0          7s
+sa-frontend2                  1/1       Running   0          7s
+```
+
+Agora temos dois pods rodando!
+
+**Atenção:** Essa não é a solução final, e tem diversas falhas. Vamos melhorar em outra sessão para outro recurso de Kubernetes **Deployments**
+
+### Resumo de Pods
+
+O servidor web Nginx com os arquivos estatic está rodando em dois diferentes pods. agora tenho duas perguntas:
+
+- Como que podemos expor isso externamente para ficar acessivel via URL, e 
+- Como que balanceamos a carga entre eles?
+
+![Balanceando carga entre pods](https://cdn-media-1.freecodecamp.org/images/I4Xjozhym548e8iBKMcPJ5DnUXZojwrnmQpT)
+
+Img. 15.Balanceando carga entre pods
+
+Kubernetes nos prove o recurso **Services**. Vamos ir logo nele, na proxima sessão.
