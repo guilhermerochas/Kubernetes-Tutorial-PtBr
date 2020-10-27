@@ -675,3 +675,230 @@ O servidor web Nginx com os arquivos estatic está rodando em dois diferentes po
 Img. 15.Balanceando carga entre pods
 
 Kubernetes nos prove o recurso **Services**. Vamos ir logo nele, na proxima sessão.
+
+### Kubernetes na Pratica -- Services
+
+O recurso **Service** do Kubernetes serve como ponto de entrada para um conjunto de pods que prove o mesmo serviço funcional. Esse recurso faz todo o trabalho duro, de descobrir serviços e fazer balanceamento de carga entre eles como é mostrado na Imagem 16
+
+![Service de Kubernetes mantendo endereços de IP](https://cdn-media-1.freecodecamp.org/images/vUV2hIHJnOtiiMKgw9GiExUShzlYB3hwUeWu)
+
+Img. 16.Service de Kubernetes mantendo endereços de IP
+
+No nosso cluster de Kubernetes, nós teremos pods com diferentes serviços funcionais. (O frontend, a aplicação Web Spring e a aplicação Python em Flask). Então a pergunta surge, como o serviço sabe qual pod apontar? ex. como que ela gera uma lista dos endpoints dos pods?
+
+Isso é feito usando **Labels**, é um processo de dois passos:
+1. Aplicar labels em todos os pods que queremos nosso Service aponte e 
+2. Aplicar um "seletor" para nosso serviço para então definir quais os pods que devem ser apontados.
+
+Isso é muito mais simples visualmente: 
+
+![Pods com labels em seus manifestos](https://cdn-media-1.freecodecamp.org/images/q-Eg301b9pZA7xpZ1hc2Tqj59cDQ2H18iRKp)
+
+Img. 17.Pods com labels em seus manifestos
+
+Nos podemos ver que os pods estão entiquedados com "app:sa-frontend" e nosso serviço está apontando pods com aquele label
+
+### Labels
+
+Labels proveem um simples metodo de organizar seus Resouces no Kubernetes. eles representão um par de chave-valor e podem ser aplicados para todos os resources. Modifique os manifestos para os pods combinarem com o exemplo mostrado anteriormente na imagem 17.
+
+Salve os arquivos e depois de completar as mudanças, aplique-as com o comando:
+
+```bash
+kubectl apply -f sa-frontend-pod.yaml
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply
+pod "sa-frontend" configured
+kubectl apply -f sa-frontend-pod2.yaml 
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply
+pod "sa-frontend2" configured
+```
+
+Nós tivemos um aviso (*appy instead of create* ou aplicar ao invés de criar, entendido). Na segunda linha, podemos ver que os pods "sa-frontend" e "sa-frontend2" estão configurados. Podemos verificar que os pods foram etiquetados por filtrar pelos pods que queremos mostrar: 
+
+```bash
+kubectl get pod -l app=sa-frontend
+NAME           READY     STATUS    RESTARTS   AGE
+sa-frontend    1/1       Running   0          2h
+sa-frontend2   1/1       Running   0          2h
+```
+
+Outra maneira de verificar que nossos pods estão etiquetados é por adicionar a flag `--show-labels` para o comando acima. Ele vai mostrar todos os labels para cada pod.
+Otimo! Nossos pods estão etiquetados e então estamos prontos para começar a apontá-los com nosso Service. Vamos começar por definir nosso serviço do tipo LoadBalancer mostrado na imagem 18.
+
+![Balanceamento de carga com o Service LoadBalancer](https://cdn-media-1.freecodecamp.org/images/xXXbN86FdMJitJZ0ueRT1DwBecqO4u681uVY)
+
+Img. 18.Balanceamento de carga com o Service LoadBalancer
+
+### Definição do Service
+
+A definição do YAML do Service Loadbalancer é mostrada abaixo:
+
+```yaml
+apiVersion: v1
+kind: Service              # 1
+metadata:
+  name: sa-frontend-lb
+spec:
+  type: LoadBalancer       # 2
+  ports:
+  - port: 80               # 3
+    protocol: TCP          # 4
+    targetPort: 80         # 5
+  selector:                # 6
+    app: sa-frontend       # 7
+```
+
+1. **Kind:** Um serviço (*service*)
+2. **Type:** especificação de tipo, nos escolhemos LoadBalancer por que queremos balancear a carga entre os pods
+3. **Port:** Especifica a porta na qual o serviço faz as requisições
+4. **Protocol:** Define a comunicação
+5. **TargetPort:** A porta na qual as requisições serão encaminhadas
+6. **Selector:** Objeto que contem propriedades de seleçao de pods
+7. **app:** sa-frontend Define quais pods serão apontados, apenas pods que estão etiquetados com "app:sa-frontend"
+
+Para criar um serviço execute o comando seguinte:
+
+```bash
+kubectl create -f service-sa-frontend-lb.yaml
+service "sa-frontend-lb" created
+```
+
+Você pode checar o estado do serviço ao executar o seguinte comando:
+
+```bash
+kubectl get svc
+NAME             TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+sa-frontend-lb   LoadBalancer   10.101.244.40   <pending>     80:30708/TCP   7m
+```
+
+O **External-IP** está em estado de espera (e não espere, ele nao irá mudar). Isso é apenas por que estamos usando **Minikube**. Se nos estivessemos executando em um provedor de nuvem como Azure ou GCP, iriamos obter um IP Publico, no qual faz nossos serviços disponiveis no mundo todo.
+
+Fora isso, Minikube não nos deixa na mão e nos prove um comando util para debugação local, execute o seguinte comando:
+
+```bash
+minikube service sa-frontend-lb
+Opening kubernetes service default/sa-frontend-lb in default browser...
+```
+
+Isso abre seu navegador apontado para o Ip dos serviços. depois que o Service chama a requisição, ele vai encaminhar para os pods (qual deles não importa). Essa abstração habilita-nos de ver a ação de inumeros pods como uma unidade, usando o Service como ponto de entrada.
+
+### Resumo de Service
+
+Nessa sessão, nos cobrimos a etiquetação de resources, usando-os como seletores nos Services, e nos definimos um serviço de LoadBalancer. Isso preenche nossos requerimentos para a escalabilidade da aplicação  (apenas adicionar novos pods entiquetados) e para balancear a carga entre os pods, usando o serviço como ponto de entrada.
+
+### Kubernetes na Pratica -- Deployments
+
+Deployments de Kubernetes nos ajudam com uma constante na vida de toda aplicação, e ela é a **mudança**. Mais e mais, as unicas aplicações que não mudam são aquelas que estão mortas, e enquanto não, mais e mais requerimentos vão vir, e mais codigo seria embarcado, ele vai ser empacotado e implantado. E em cada um dos processos, erros podem acontecer
+
+O resource de Deployment automatiza o processo de mover uma versão para a proxima, sem quedas no caso de falhas, ele permite rapidamente retornar para a versão passada.
+
+### Deployments na Pratica
+
+Atualmente temos **dois pods** e **um serviço** expondo-os para um balanceamento de carga entre eles (Veja Img. 19.). Nos mencionamos que a implementação desses pods separadamente é longe de ser perfeita. Requer o gerencia de cada um (criar, atualizar, deletar e monitorar sua saude.). Atualizações rapidas e rapidas reversões são fora de questão! Não é aceitavel e o recurso de **Deployment** do Kubernetes resolve cada um desses problemas.
+
+![Estado atual](https://cdn-media-1.freecodecamp.org/images/81V1N8qcLyWZi4t69mWSgYbQWjQrqRD2Ye3W)
+
+Img. 19.Estado atual
+
+Antes de continuar vamos dizer o quer queremos atingir, enquanto ele for nos prover um entendimento que permite-nos entender a definição do manifesto para o recurso de deployment. O que queremos é:
+
+1. Dois pods da imagem rinormaloku/sentiment-analysis-frontend
+2. Sem quedas no deployment
+3. Pods serão entiquetados com `app: sa-frontend` para que os serviços sejam descobertos pelo Servic **sa-frontend-lb**
+
+Na proxima sessão, vamos traduzir os requerimentos para uma definição de Deployment.
+
+### Definição de Deployment
+
+A definição de recursos YAML que arquiva todas os pontos mencionados acima:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment                                          # 1
+metadata:
+  name: sa-frontend
+spec:
+  selector:                                               # 2
+    matchLabels:
+      app: sa-frontend                                    
+  replicas: 2                                             # 3
+  minReadySeconds: 15
+  strategy:
+    type: RollingUpdate                                   # 4
+    rollingUpdate: 
+      maxUnavailable: 1                                   # 5
+      maxSurge: 1                                         # 6
+  template:                                               # 7
+    metadata:
+      labels:
+        app: sa-frontend                                  # 8
+    spec:
+      containers:
+        - image: rinormaloku/sentiment-analysis-frontend
+          imagePullPolicy: Always                         # 9
+          name: sa-frontend
+          ports:
+            - containerPort: 80
+```
+
+1. **Kind:** Um deployment
+2. **Selector:** Pods combinando com um seletor vão ser levados a um estado de gerenciamento por esse deployment.
+3. **Replicas:** É uma propriedade do Spec dos deployment que define quantos pods queremos rodar. Então apenas 2
+4. **Type:** Especifica o tipo de estrategia usada quando for mover para uma proxima versão. A estategia **RollingUpdate** Garante deployments de Nenhuma Queda
+5. **MaxUnavaible:** É uma propriedade do objeto RollingUpdate que especifica a indisponibilidade maxima permitida pelos pods (comparada com o estado desejado) quando for fazer a atualização *rolling update*. Para nosso deployment que tem 2 replicas isso significa que depois de terminar um Pod, a gente ainda teria outro rodando, fazendo nossa aplicação ainda acessivel.
+6. **MaxSurge** é outra propriedade do objeto RollingUpdate que define a quantidade maxima de pods adicionada ao deployment (comparada com o estado desejado). para nosso deployment, isso significa que quando mover para uma nova versão podemos adicionar um pod, oque soma com 3 pods ao mesmo tempo.
+7. **Template:** especifica o modelo de pod que nosso Deployment vai usar para criar novos pods. Mais especificamente para reunir os pods que lhe golpearam imediatamente.
+8. `app: sa-frontend` a etiqueta para usar por pods criados por esse modelo 
+9. **ImagePullPolicy** quando definida para **Always**, ela vai dar um *push* nas imagens de containers em cada um dos redeployments
+
+Honestamente, essa parede te texto é confusa até para mim, vamos apenas começar com o exemplo: 
+
+```bash
+kubectl apply -f sa-frontend-deployment.yaml
+deployment "sa-frontend" created
+```
+
+Sempre verifique que tudo foi como planejado:
+
+```bash
+kubectl get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+sa-frontend                    1/1       Running   0          2d
+sa-frontend-5d5987746c-ml6m4   1/1       Running   0          1m
+sa-frontend-5d5987746c-mzsgg   1/1       Running   0          1m
+sa-frontend2                   1/1       Running   0          2d
+```
+
+Nós tivemos 4 pods rodando, dois criados pelo Deployment e os outros dois que foram criados manualmente. Delete os que foram criados manualmente com o comando `kubectl delete pod <nome-do-pod>`.
+
+**Exercicio:** Delete um dos pods do deployment tambem e veja o que acontece. Pense no motivo antes de ler a explicação abaixo.
+
+**Explicação:** Deletar um pod fez com que o Deployment noticie que o estado atual (1 pod rodando) é diferente do estado desejado (2 pods rodando) então ele iniciou outro pod.
+
+Entao oque é tão bom sobre Deployments, alem do estado desejado? vamos começar com beneficios.
+
+### Beneficio \#1: Rodar um deployment sem quedas
+
+Nosso Gerente de Produtos veio com um novo requerimento, nossos clientes querem um botão verde no frontend. Os desenvolvedores mandaram o código e providenciaram tudo o que precisamos, a imagem de container `rinormaloku/sentiment-analysis-frontend:green`. Agora é nossa vez, nos os DevOps temos que mandar um deployment sem quedas, Será que a maneira dificil vale a pena? Vamos ver!
+
+Edite o arquivo `sa-frontend-deployment.yaml` por mudar a imagem do container para a nova imagem `rinormaloku/sentiment-analysis-frontend:green`. Salve as mudanças como `sa-frontend-deployment-green.yaml` e execute o seguinte comando:
+
+```bash
+kubectl apply -f sa-frontend-deployment-green.yaml --record
+deployment "sa-frontend" configured
+```
+
+Nos podemos checar os status da implementação usando o seguinte comando:
+
+```bash
+kubectl rollout status deployment sa-frontend
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 of 2 updated replicas are available...
+deployment "sa-frontend" successfully rolled out
+```
+
+De acorod com a *output* o deployment foi implementado. isso foi feito numa maneira tão estilosa que as replicas foram substituidas uma por uma por uma. Significa que nossa aplicação esta sempre em pé. Antes de continuar vamos verificar se a atualização está rodando.
