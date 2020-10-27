@@ -725,7 +725,8 @@ sa-frontend2   1/1       Running   0          2h
 Outra maneira de verificar que nossos pods estão etiquetados é por adicionar a flag `--show-labels` para o comando acima. Ele vai mostrar todos os labels para cada pod.
 Otimo! Nossos pods estão etiquetados e então estamos prontos para começar a apontá-los com nosso Service. Vamos começar por definir nosso serviço do tipo LoadBalancer mostrado na imagem 18.
 
-![Balanceamento de carga com o Service LoadBalancer](https://cdn-media-1.freecodecamp.org/images/xXXbN86FdMJitJZ0ueRT1DwBecqO4u681uVY)
+
+![Balanceamento de carga com o Service LoadBalancer](https://miro.medium.com/max/600/1*dLmXo_8w0hfBZUXZY968Wg.gif)
 
 Img. 18.Balanceamento de carga com o Service LoadBalancer
 
@@ -901,4 +902,4 @@ Waiting for rollout to finish: 1 of 2 updated replicas are available...
 deployment "sa-frontend" successfully rolled out
 ```
 
-De acorod com a *output* o deployment foi implementado. isso foi feito numa maneira tão estilosa que as replicas foram substituidas uma por uma por uma. Significa que nossa aplicação esta sempre em pé. Antes de continuar vamos verificar se a atualização está rodando.
+De acordo com a *output* o deployment foi implementado. isso foi feito numa maneira tão estilosa que as replicas foram substituidas uma por uma por uma. Significa que nossa aplicação esta sempre em pé. Antes de continuar vamos verificar se a atualização está rodando.
