@@ -903,3 +903,108 @@ deployment "sa-frontend" successfully rolled out
 ```
 
 De acordo com a *output* o deployment foi implementado. isso foi feito numa maneira tão estilosa que as replicas foram substituidas uma por uma por uma. Significa que nossa aplicação esta sempre em pé. Antes de continuar vamos verificar se a atualização está rodando.
+
+### Verificando o deployment 
+
+Vamos ver a atualização ao vivo no nosso navegador. Execute o mesmo comando usado antes `minikube service sa-frontend-lb`, que abre nosso navegador. Nós podemos ver que o botão foi atualizado.
+
+![O botão verde](https://cdn-media-1.freecodecamp.org/images/aRxOGkn2bSeCWdsuMPFAPRgbR7ZTQ59RX3uw)
+
+Img. 20.O botão verde
+
+### Por tras das cenad de "The RollingUpdate"
+
+Depois que aplicamos o novo deployment, Kubernetes comparou o novo estado com o anterior. No nosso caso, o novo estado requer dois pods da imagem `rinormaloku/sentiment-analysis-frontend:green.` Isso é diferente do estado atual que esta rodando então ele opera no **RollingUpdate**
+
+![RollingUpdate substituindo pods](https://cdn-media-1.freecodecamp.org/images/I86XgWQFhpFLolvA8v0eHmZSKGilmlTaevTa)
+
+Img. 21.RollingUpdate substituindo pods
+
+O RollingUpdate age de acordo com as regras especificadas, aqueles que são "**maxUnavailable**:1" e "**maxSurge**:1". Isso significa que o deployment pode ser terminado em um pod, e pode começar em apenas um novo pod. Esse processo é repetido até que os pods sejam substituidos (ver Img.21).
+
+Vamor continuar com o beneficio numero 2.
+
+**Aviso Legal:** *Para intenções de entretenimento, a proxima parte é escrita como uma novela*
+
+### Beneficio #2: Voltando para o estado anterior
+
+O Gerente de Produtos corre ao seu escritório e ele está tento uma **crise!**
+
+"A aplicação tem um bug critico, em PRODUÇÃO!! Reverta para a versão passada imediatamente" &mdash; grita o gerente de produtos
+
+Ele ve frieza em você, sem mexer um olho. Você se vira para seu amado terminal e digita:
+
+```bash
+kubectl rollout history deployment sa-frontend
+deployments "sa-frontend"
+REVISION  CHANGE-CAUSE
+1         <none>         
+2         kubectl.exe apply --filename=sa-frontend-deployment-green.yaml --record=true
+```
+
+Você toma um breve periodo olhado para os deployments. "A ultima versão estava bugada, porem a versão passada funcionava perfeitamente?" &mdash; você pergunta ao Gerente de Produtos.
+
+"Sim, você está ao menos me escutando!" &mdash; grita o gerente de produtos.
+
+Você o ignora, você sabe o que tem que fazer, começa a digitar:
+
+```bash
+kubectl rollout undo deployment sa-frontend --to-revision=1
+deployment "sa-frontend" rolled back
+```
+
+Você recarrega a pagina e a mundança foi desfeita!
+
+O gerente de produtos fica boquiaberto.
+
+Você salvou o dia!
+
+O fim!
+
+Sim... foi uma novela chata. Antes de Kubernetes existir era bem melhor, com mais drama, mais intensidade, e durava mais tempo. Ahh os velhos tempos!
+
+A maioria dos comandos são auto explicativos, a não ser um detalhe que você teve que perceber sozinho. Por que a primeira revisão tinha uma **CHANGE-CAUSE (CAUSA DE MUDANÇA)** de \<none\> equanto a segunda tinha uma **CHANGE-CAUSE** de “kubectl.exe apply –filename=sa-frontend-deployment-green.yaml –record=true.
+
+Se você concluiu que é por conta da flag `--record` que usamos para aplicar uma nova imagem então está totalmente correto!
+
+Na proxima sessão, vamos ver os conceitos aprendidos até agora para completar a arquitetura completa.
+
+### Kubernetes e tudo mais na Pratica
+
+Nós aprendemos todos os recursos que precisamos para completar a arquitetura, esse é o motivo por que essa parte será rapida. Na imagem 22 nós tivemos desativado tudo o que tinhamos para fazer. Vamos começar da ponta: **Fazendo deploy da sa-logic deployment**
+
+![Estado Atual da Aplicação](https://cdn-media-1.freecodecamp.org/images/CwBGmdNtPUeZwsTSL9inGx8xikkNEejnEeVQ)
+
+### Deployment da SA-Logic
+
+Navegue no seu terminal na pasta resource-manifests e execute o seguinte comando:
+
+```bash
+kubectl apply -f sa-logic-deployment.yaml --record
+deployment "sa-logic" created
+```
+
+O deployment SA-Logic criou três pods. (Rodando em um container de nossa aplicação python). Ela foi etiquetada como `app: sa-logic.` Essa etiqueta nos habilita apontar usando o seletor do service de SA-Logic. Por favor espere um pouco para abrir o arquivo `sa-logic-deployment.yaml` e checar o conteudo.
+
+São os mesmos conceitos todos denovo, vamos diretor para o proximo recurso: **o service SA-Logic.**
+
+### Service do SA Logic
+
+Vamos elaborar por que nós precisamos desse serviço. Nossa aplicação Java (Rodando nos pods de um deployment de SA -- WebAp) depende da analise sentimental feita pela Aplicação Python. Mas agora nós não temos apenas uma unica aplicação python escutando em uma porta, nós temos 2 pods e se necessario poderiamos ter mais.
+
+Esse é o motivo no qual precisamos de um **Service** que "age como ponto de entrada para um conjunto de pods que prove o mesmo serviço funcional". Isso signifca que nós podemos usar o Service SA-Logic como ponto de entrada para todos os pods de SA-Logic
+
+Vamos fazer isso:
+
+```bash
+kubectl apply -f service-sa-logic.yaml
+service "sa-logic" created
+```
+
+**Atualizando o Estado da Aplicação:** Nós temos 2 pods (contendo a Aplicação) rodando e temos o service SA-Logic agindo como ponto de entrada que usaremos nos pods da SA-WebApp
+
+![Atualizando o Estado da Aplicação](https://cdn-media-1.freecodecamp.org/images/fYibPnq4frpa7jf4aq9Htc3sT0OxtgOTZ52x)
+
+Img. 23.Atualizando o Estado da Aplicação
+
+Agora precisamos fazer o deploy dos pods da SA-Webappn usando um recurso de deployment.
