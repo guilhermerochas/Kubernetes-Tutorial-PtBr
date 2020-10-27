@@ -1008,3 +1008,52 @@ service "sa-logic" created
 Img. 23.Atualizando o Estado da Aplicação
 
 Agora precisamos fazer o deploy dos pods da SA-Webappn usando um recurso de deployment.
+
+### Deployment do SA-WebApp
+
+Nos estamos pegando o jeito com os deployments, mesmo assim esse tem mais uma caracteristica. Se você abrir o arquivo `sa-web-app-deployment.yaml` você vai encontrar essa parte nova:
+
+```yaml
+- image: rinormaloku/sentiment-analysis-web-app
+  imagePullPolicy: Always
+  name: sa-web-app
+  env:
+    - name: SA_LOGIC_API_URL
+      value: "http://sa-logic"
+  ports:
+    - containerPort: 8080
+```
+
+A primeira coisa que nos interessa é o que faz essa propriedade **env**? E nos supomos que ela esta declarando uma variavel de ambiente SA_LOGIC_API_URL com o valor “http://sa-logic” dentro de nossos pods. mas por que estamos inicializando isso com **http://sa-logic,** o que é **sa-logic**?
+
+Vamos ser apresentados ao **kube-dns**
+
+### KUBE-DNS
+
+Kubernetes tem um pod especial, o **kube-dns**. E por padrão, todos os Pods usam ele como Servidor DNS. Uma propriedade importante do **kube-dns** é que ele cria um registro DNS para cada service criado.
+
+Isso significa que quando criamos o serviço **sa-logic** ele ganha um endereço de IP. O nome dele é adicionado nesse registro (junto ao endereço de IP) em kube-dns. Isso permite que todos os pods traduzam a **sa-logic** para os endereços de IP dos services da SA-Logic.
+
+Bom, agora podemos continuar com:
+
+### Deployment do SA WebApp (continuado)
+
+Execute o comando:
+
+```bash
+kubectl apply -f sa-web-app-deployment.yaml --record
+deployment "sa-web-app" created
+```
+
+Feito. Só nos falta expor os pods do SA-WebApp externamente usando um service LoadBalancer. Isso permite que a aplicação react faça requisições http para nosso service que age como um ponto de entrada para pods do SA-WebApp.
+
+### Sevice do SA-WebApp
+
+Abra o arquivo `service-sa-web-app-lb.yaml`, como pode ver tudo é familiar à você. Então sem enrolação execute o comando:
+
+```bash
+kubectl apply -f service-sa-web-app-lb.yaml
+service "sa-web-app-lb" created
+```
+
+A arquitetura está completa. Mas temos uma unica divergência. Quando nos implementamos pods do SA-Frontend nossa imagem de container estava apontando para nosso SA-WebApp em http://localhost:8080/sentiment. Mas agora nos precisamos atualizar isso para o ponto do endereço de IP do LoadBalancer do SA-WebApp. (O qual age como um ponto de entrada dos pods do SA-WebApp).
