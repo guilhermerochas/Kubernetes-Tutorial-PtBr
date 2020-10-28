@@ -1057,3 +1057,73 @@ service "sa-web-app-lb" created
 ```
 
 A arquitetura está completa. Mas temos uma unica divergência. Quando nos implementamos pods do SA-Frontend nossa imagem de container estava apontando para nosso SA-WebApp em http://localhost:8080/sentiment. Mas agora nos precisamos atualizar isso para o ponto do endereço de IP do LoadBalancer do SA-WebApp. (O qual age como um ponto de entrada dos pods do SA-WebApp).
+
+Arrumando a divergência nos prove a oportunidade para resumidamente engloba mais uma vez tudo do código do deployment. (É até mais efetivo se voce fizer sozinho ao invés de seguir o codigo abaixou). Vamos começar:
+
+1. Pegue o IP do Loadbalancer da SA-WebApp por executar o comando seguinte:
+
+```bash
+minikube service list
+|-------------|----------------------|-----------------------------|
+|  NAMESPACE  |         NAME         |             URL             |
+|-------------|----------------------|-----------------------------|
+| default     | kubernetes           | No node port                |
+| default     | sa-frontend-lb       | http://192.168.99.100:30708 |
+| default     | sa-logic             | No node port                |
+| default     | sa-web-app-lb        | http://192.168.99.100:31691 |
+| kube-system | kube-dns             | No node port                |
+| kube-system | kubernetes-dashboard | http://192.168.99.100:30000 |
+|-------------|----------------------|-----------------------------|
+```
+2. Use o Ip do LoadBalancer do SA-Webapp no arquivo `sa-frontend/src/App.js`, como mostrado abaixo:
+
+```bash
+analyzeSentence() {
+        fetch('http://192.168.99.100:31691/sentiment', { /* shortened for brevity */})
+            .then(response => response.json())
+            .then(data => this.setState(data));
+    }
+```
+
+3. Tranformar em arquivos estáticos `npm run build` (voce precisa navegar para a pasta **sa-frontend**)
+
+4. Levante a imagem de container:
+
+```bash
+docker build -f Dockerfile -t $DOCKER_USER_ID/sentiment-analysis-frontend:minikube .
+```
+
+5. Faça um *push* da imagem do Docker hub.
+
+```bash
+docker push $DOCKER_USER_ID/sentiment-analysis-frontend:minikube
+```
+
+6. Edite o sa-frontend-deployment.yaml para usar a nova imagem e 
+
+7. Execute o comando `kubectl apply -f sa-frontend-deployment.yaml`
+
+Recarregue o navegador ou se você fechou a janela execute `minikube service sa-frontend-lb`. de uma tentativa escrevendo uma frase!
+
+![](https://cdn-media-1.freecodecamp.org/images/GkLNiTbXMvnaTdwnH0DjS-Lhq7mizlAnl9Mm)
+
+### Resumo do Artigo
+
+Kubernetes é benefico para um time, para esse projeto, simplifica implemnetação, escalabilidade, resiliencia, isso permite-nos consumir qualquer camada de infraestrutura e quer saber? De agora em diante, vamos chamá-lo de Supernetes!
+
+Nos cobrimos nessas series:
+
+- Transformar / Empacotar / Rodar ReactJS, Java e Aplicações Python  
+- Containers Docker; como construir e subir usandi Dockerfiles
+- Registros de Containers; Nos usamos o Docker Hub como repositório para nossos containers
+- Cobrimos as mais importantes partes de Kubernetes
+- Pods
+- Services (Serviços)
+- Deployments (Implantações)
+- Novos conceitos de deployments sem quedas
+- Criar aplicações escalaveis
+- E no processo, migramos uma aplicação inteira de microserviços para um Cluster de Kubernetes.
+
+Eu sou Rinor Maloku e eu quero agradecer por juntar a mim nessa viagem. Já que você leu até aqui eu sei que você amou esse artigo e estaria interessado em mais. Eu escrevo artigos que vão por dentro de detalhoes de novas tecnologias a cada 3 meses. Você pode sempre esperar uma aplicação de exemplo, na prática, e um guia que prove para você as ferramentas e o conhecimento para enfrentar qualquer aplicação de mundo real
+
+Para manter contato e não perder nenhum dos meus artigos se inscreva no meu [jornal](https://tinyletter.com/rinormaloku), me siga no [Twitter](https://twitter.com/rinormaloku), e de uma olhada na minha pagina [rinormaloku.com.](https://rinormaloku.com/)
