@@ -1,10 +1,27 @@
 # Before you Start
 
-This is a translation to portuguese of an [Article](https://www.freecodecamp.org/news/learn-kubernetes-in-under-3-hours-a-detailed-guide-to-orchestrating-containers-114ff420e882/) created by Rinor Maloku about Kubernetes, all the material provided, commands, image sources are all of his authorship just shared for the ones who strugle with the english language.
+This is a translation to portuguese of an [Article](https://www.freecodecamp.org/news/learn-kubernetes-in-under-3-hours-a-detailed-guide-to-orchestrating-containers-114ff420e882/) created by Rinor Maloku about Kubernetes, all the material provided, commands, image sources are all of his authorship just shared for the ones who struggle with the english language.
 
 ## Links
 - Maloku's github profile: https://github.com/rinormaloku
 - Project Repository: https://github.com/rinormaloku/k8s-mastery
+- Twitter Profile: https://twitter.com/rinormaloku
+- Newsletter: https://tinyletter.com/rinormaloku
+- Website: https://rinormaloku.com/
+
+---
+
+# Antes de Começar
+
+Essa é uma tradução para portugues de um [Artigo](https://www.freecodecamp.org/news/learn-kubernetes-in-under-3-hours-a-detailed-guide-to-orchestrating-containers-114ff420e882/) criado por Rinor Maloku sobre Kubernetes, todo o material providenciado, comandos, recursos de imagens são todos de sua autoria apenas compartilhados para aqueles que tem dificuldades com a lingua inglesa.
+
+## Links
+- Perfil do github do Maloku: https://github.com/rinormaloku
+- Repositório do Projeto: https://github.com/rinormaloku/k8s-mastery
+- Perfil do Twitter: https://twitter.com/rinormaloku
+- Jornal: https://tinyletter.com/rinormaloku
+- Website: https://rinormaloku.com/
+
 ---
 
 # Aprenda Kubernetes em 3 Horas: Um Guia detalhado de Orquestração de Containers
@@ -1126,4 +1143,4 @@ Nos cobrimos nessas series:
 
 Eu sou Rinor Maloku e eu quero agradecer por juntar a mim nessa viagem. Já que você leu até aqui eu sei que você amou esse artigo e estaria interessado em mais. Eu escrevo artigos que vão por dentro de detalhoes de novas tecnologias a cada 3 meses. Você pode sempre esperar uma aplicação de exemplo, na prática, e um guia que prove para você as ferramentas e o conhecimento para enfrentar qualquer aplicação de mundo real
 
-Para manter contato e não perder nenhum dos meus artigos se inscreva no meu [jornal](https://tinyletter.com/rinormaloku), me siga no [Twitter](https://twitter.com/rinormaloku), e de uma olhada na minha pagina [rinormaloku.com.](https://rinormaloku.com/)
+Para manter contato e não perder nenhum dos meus artigos se inscreva no meu [jornal](https://tinyletter.com/rinormaloku), me siga no [Twitter](https://twitter.com/rinormaloku), e de uma olhada na minha pagina [rinormaloku.com](https://rinormaloku.com/).
